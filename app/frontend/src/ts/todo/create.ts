@@ -1,6 +1,12 @@
-import { securedApiCall } from "../utils/security.js"
+import { checkUpdateTokens, securedApiCall } from "../utils/security.js"
 
 document.addEventListener("DOMContentLoaded", async () => {
+    const data = await checkUpdateTokens();
+    if (!data || !data.user_id) {
+        console.error(`Ошибка при возврате функции checkUpdateTokens: ${data}`);
+        return;
+    };
+    
     const form = document.getElementById("create_task-form") as HTMLFormElement;
 
     form.addEventListener("submit", async (e) => {
