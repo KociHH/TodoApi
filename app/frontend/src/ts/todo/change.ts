@@ -63,7 +63,7 @@ class ChangeTask {
             }
 
         } else {
-            console.error("Ошибка возврат данных todo/delete");
+            console.error("Ошибка возврат данных /todo/data/change");
             return; 
         }
     }
@@ -86,6 +86,14 @@ class ChangeTask {
             this.oldDescription = dataElem.description
             this.oldTitle = dataElem.title
             this.taskId = dataElem.task_id
+
+            const titleInput = document.getElementById("title") as HTMLInputElement;
+            const descriptionTextarea = document.getElementById("description") as HTMLTextAreaElement;
+            
+            if (titleInput && descriptionTextarea) {
+                titleInput.value = dataElem.title;
+                descriptionTextarea.value = dataElem.description;
+            }
 
         } else {
             console.error("Вернулись пустые данные в функции getElemTask");

@@ -186,9 +186,6 @@ async def change_task():
     with open(path_html + "todo/change.html", "r", encoding="utf-8") as f:
         html_content = f.read()
 
-    html_content = html_content.replace("{{title}}", "")
-    html_content = html_content.replace("{{description}}", "")
-
     return HTMLResponse(content=html_content)
 
 @router.get("/todo/data/change")
@@ -227,7 +224,7 @@ async def change_data_task(
         logger.error(f"Ошибка в функции change_data_task: {e}")
         raise HTTPException(status_code=500, detail="System error")
 
-@router.post("todo/change")
+@router.post("/todo/change")
 async def change_task_post(
     change_task: ChangeTask,
     token_info: TokenProcess = Depends(TokenProcess().token_info),
@@ -242,7 +239,7 @@ async def change_task_post(
             TodoElements.id_todo == change_task.task_id,
         )
 
-        updated = task_dao.update(
+        updated = await task_dao.update(
             where,
             {
                 "title": change_task.title,

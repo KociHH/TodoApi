@@ -9,8 +9,8 @@
     <h3>Создайте свою первую задачу!</h3>
     <form id="change_task-form">
         <div>
-            <input id="title" type="text" placeholder="Заголовок" required>
-            <input id="description" type="text" placeholder="Описание" required>
+            <input id="title" type="text" value="{{title}}">
+            <textarea id="description">{{description}}</textarea>
             <button type="submit">Изменить</button>
         </div>
     </form>
