@@ -2,14 +2,13 @@ from fastapi import FastAPI, Depends, HTTPException, APIRouter
 from fastapi.responses import HTMLResponse
 from kos_Htools.sql.sql_alchemy.dao import BaseDAO
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.backend.db.pydantic import Login, Register
+from app.backend.schemas.user import Login, Register
 from app.backend.db.sql.settings import get_db_session
 from app.backend.db.sql.tables import UserRegistered
-from app.backend.jwt.token import TokenProcess
+from app.backend.services.jwt.token import TokenProcess
 from app.backend.utils.dependencies import PSWD_context, path_html
-from app.backend.utils.user import UserProcess
 import logging
-from app.backend.jwt.utils import create_token
+from app.backend.services.jwt.utils import create_token
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -53,7 +52,7 @@ async def register_process(reg: Register, db_session: AsyncSession = Depends(get
 
 @router.get("/login", response_class=HTMLResponse)
 async def login_user():
-    with open(path_html + "register.html", "r", encoding="utf-8") as f:
+    with open(path_html + "login.html", "r", encoding="utf-8") as f:
         html_content = f.read()
 
     return HTMLResponse(content=html_content)
@@ -63,7 +62,7 @@ async def login_process(log: Login, db_session: AsyncSession = Depends(get_db_se
     user_dao = BaseDAO(UserRegistered, db_session)
     user = await user_dao.get_one(UserRegistered.name == log.name)
 
-    if not user:
+    if user:
         pass_hash = PSWD_context.verify(log.password, user.password)
 
         if pass_hash:

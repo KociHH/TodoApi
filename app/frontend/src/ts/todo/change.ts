@@ -15,7 +15,7 @@ class ChangeTask {
             const description = (document.getElementById("description") as HTMLInputElement).value;
 
             if (this.checkChange(title, description)) {
-                const response = await securedApiCall("todo/change", {
+                const response = await securedApiCall("/todo/change", {
                     method: "POST",
                     headers: {
                         'Content-Type': 'application/json',
@@ -49,7 +49,7 @@ class ChangeTask {
     }
 
     private async getElemTask() {
-        const response = await securedApiCall("/todo/data/change");
+        const response = await securedApiCall(`/todo/data/change?task_id=${this.taskId}`);
 
         if (response && response.ok) {
             const data = await response.json();
@@ -81,11 +81,21 @@ class ChangeTask {
             return;
         };
 
+        const urlParams = new URLSearchParams(window.location.search);
+        const taskIdFromUrl = urlParams.get('task_id');
+
+        if (taskIdFromUrl === null || taskIdFromUrl === "null" || isNaN(Number(taskIdFromUrl))) {
+            console.error(`Недопустимый Task ID в URL: ${taskIdFromUrl}`);
+            window.location.href = "/todo/tasks";
+            return;
+        }
+
+        this.taskId = taskIdFromUrl;
+
         const dataElem = await this.getElemTask();
         if (dataElem) {
             this.oldDescription = dataElem.description
             this.oldTitle = dataElem.title
-            this.taskId = dataElem.task_id
 
             const titleInput = document.getElementById("title") as HTMLInputElement;
             const descriptionTextarea = document.getElementById("description") as HTMLTextAreaElement;

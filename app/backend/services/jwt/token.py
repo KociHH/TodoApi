@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class TokenProcess:
     def __init__(
         self,
-        token: str | None,
+        token: str | None = None,
         ) -> None:
         self.token = token
         self.data_token: None | dict = None

@@ -1,14 +1,16 @@
 from typing import Coroutine
-from fastapi import Depends, APIRouter, HTTPException, Query
+from fastapi import Depends, APIRouter, HTTPException
+from fastapi.params import Query
 import logging
 from fastapi.responses import HTMLResponse
 from kos_Htools.sql.sql_alchemy.dao import BaseDAO
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import and_
 
-from app.backend.db.pydantic import ChangeStatusTask, ChangeTask, DeleteTask, NewCreateTask
+from app.backend.schemas.todo import ChangeStatusTask, ChangeTask, DeleteTask, NewCreateTask
 from app.backend.db.sql.settings import get_db_session
 from app.backend.db.sql.tables import TodoElements, UserRegistered
-from app.backend.jwt.token import TokenProcess
+from app.backend.services.jwt.token import TokenProcess
 from app.backend.utils.dependencies import path_html
 
 logger = logging.getLogger(__name__)
@@ -23,10 +25,11 @@ async def tasks_user():
 
 @router.get("/todo/tasks/data")
 async def tasks_data_user(
-    token_info: TokenProcess = Depends(TokenProcess().token_info()),
+    token_info: TokenProcess = Depends(TokenProcess().token_info),
     db_session: AsyncSession = Depends(get_db_session)
     ):
-    user_id = token_info.data_token.get("user_id")
+    token_data, _ = token_info
+    user_id = token_data.get("user_id")
     
     user_dao = BaseDAO(TodoElements, db_session)
     user = await user_dao.get_all_column_values(
@@ -39,13 +42,22 @@ async def tasks_data_user(
         where=TodoElements.user_id == user_id)
 
     if user:
-        user.sort(key=lambda i: i[3], reverse=True)
+        user.sort(key=lambda i: i[3])
         if len(user) > 10:
             user = user[:10]
+        
+        tasks_to_list = []
+        for task_tuple in user:
+            tasks_to_list.append({
+                "title": task_tuple[0],
+                "description": task_tuple[1],
+                "status": task_tuple[2],
+                "id_todo": task_tuple[3]
+            })
 
         return {
             "success": True,
-            "todo": user,
+            "todo": tasks_to_list,
         }
     
     else:
@@ -68,7 +80,8 @@ async def create_task_post(
     token_info: TokenProcess = Depends(TokenProcess().token_info),
     db_session: AsyncSession = Depends(get_db_session)
 ):
-    user_id = token_info.data_token.get("user_id")
+    token_data, _ = token_info
+    user_id = token_data.get("user_id")
     task_dao = BaseDAO(TodoElements, db_session)
 
     tasks_id = await task_dao.get_all_column_values(
@@ -78,12 +91,12 @@ async def create_task_post(
 
     if tasks_id:
         for existing_task_id in sorted(tasks_id, reverse=True):
-            task_dao.update(
-                (TodoElements.id_todo == existing_task_id,
+            await task_dao.update(
+                and_(TodoElements.id_todo == existing_task_id,
                 TodoElements.user_id == user_id),
                 {"id_todo": existing_task_id + 1}
             )
-    task_dao.create({
+    await task_dao.create({
         "title": newtask.title,
         "description": newtask.description,
         "status": False,
@@ -91,13 +104,14 @@ async def create_task_post(
         "user_id": user_id
     })
 
+    logger.info(f"Добавлена таска юзером: {user_id}")
     return {
         "success": True,
         "message": "Task addition!"
     }
 
 
-@router.post("todo/delete")
+@router.post("/todo/delete")
 async def delete_task_post(
     delete_task: DeleteTask,
     token_info: TokenProcess = Depends(TokenProcess().token_info),
@@ -105,11 +119,13 @@ async def delete_task_post(
 ):
     try:
         task_dao = BaseDAO(TodoElements, db_session)
-        user_id = token_info.data_token.get("user_id")
+        token_data, _ = token_info
+        user_id = token_data.get("user_id")
+        delete_task_id_int = int(delete_task.task_id)
 
-        where = (
+        where = and_(
             TodoElements.user_id == user_id,
-            TodoElements.id_todo == delete_task.task_id,
+            TodoElements.id_todo == delete_task_id_int,
             )
 
         tasks_id = await task_dao.get_all_column_values(
@@ -122,11 +138,12 @@ async def delete_task_post(
 
             if deleted:
                 for existing_task_id in sorted(tasks_id, reverse=True):
-                    task_dao.update(
+                    await task_dao.update(
                     where,
                     {"id_todo": existing_task_id - 1},
                 )
 
+                logger.info(f"Удалена таска юзером: {user_id}")
                 return {
                     "success": True,
                     "message": "Task successfully removed!"
@@ -141,7 +158,7 @@ async def delete_task_post(
         raise HTTPException(status_code=500, detail="System error")
 
 
-@router.post("todo/change_status")
+@router.post("/todo/change_status")
 async def change_status_task_post(
     status_task: ChangeStatusTask,
     token_info: TokenProcess = Depends(TokenProcess().token_info),
@@ -149,23 +166,27 @@ async def change_status_task_post(
 ):
     try:
         task_dao = BaseDAO(TodoElements, db_session)
-        user_id = token_info.data_token.get("user_id")
+        token_data, _ = token_info
+        user_id = token_data.get("user_id")
+        status_task_id_int = int(status_task.task_id)
 
-        where = (
+        where = and_(
             TodoElements.user_id == user_id,
-            TodoElements.id_todo == status_task.task_id,
+            TodoElements.id_todo == status_task_id_int,
         )
 
         task_info = await task_dao.get_one(where)
-        task_info.status = not task_info.status
+        old_status = task_info.status
+        new_status = not old_status
 
         if task_info:
-            updated = await task_dao.update({
+            updated = await task_dao.update(
                 where,
-                {"status": task_info.status}
-            })
+                {"status": new_status}
+            )
         
             if updated:
+                logger.info(f"Изменен статус таски {status_task.task_id} на {new_status} юзером: {user_id}")
                 return {
                     "success": True,
                     "message": "Status updated!",
@@ -186,6 +207,9 @@ async def change_task():
     with open(path_html + "todo/change.html", "r", encoding="utf-8") as f:
         html_content = f.read()
 
+    html_content = html_content.replace("{{title}}", "")
+    html_content = html_content.replace("{{description}}", "")
+
     return HTMLResponse(content=html_content)
 
 @router.get("/todo/data/change")
@@ -196,11 +220,13 @@ async def change_data_task(
 ):
     try:
         task_dao = BaseDAO(TodoElements, db_session)
-        user_id = token_info.data_token.get("user_id")
+        token_data, _ = token_info
+        user_id = token_data.get("user_id")
+        task_id_int = int(task_id)
 
-        where = (
+        where = and_(
             TodoElements.user_id == user_id,
-            TodoElements.id_todo == task_id,
+            TodoElements.id_todo == task_id_int,
         )
 
         task_info = await task_dao.get_one(where)
@@ -232,11 +258,13 @@ async def change_task_post(
 ):
     try:
         task_dao = BaseDAO(TodoElements, db_session)
-        user_id = token_info.data_token.get("user_id")
+        token_data, _ = token_info
+        user_id = token_data.get("user_id")
+        change_task_id_int = int(change_task.task_id)
         
-        where = (
+        where = and_(
             TodoElements.user_id == user_id,
-            TodoElements.id_todo == change_task.task_id,
+            TodoElements.id_todo == change_task_id_int,
         )
 
         updated = await task_dao.update(
@@ -247,6 +275,7 @@ async def change_task_post(
             })
 
         if updated:
+            logger.info(f"Изменена таска {change_task.task_id} юзером: {user_id}")
             return {
                 "success": True,
                 "message": f"Task {change_task.task_id} was updated!"

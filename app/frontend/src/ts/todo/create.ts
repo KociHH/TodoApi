@@ -10,6 +10,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const form = document.getElementById("create_task-form") as HTMLFormElement;
 
     form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
         const title = (document.getElementById("title") as HTMLInputElement).value
         const description = (document.getElementById("description") as HTMLInputElement).value
 

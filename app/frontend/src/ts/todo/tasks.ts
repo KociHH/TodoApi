@@ -1,7 +1,7 @@
 import { checkUpdateTokens, securedApiCall } from "../utils/security.js";
 
 class TodoTasks {
-    private tasksArray: Array<Array<any>> | null = null 
+    private tasksArray: Array<{ title: string; description: string; status: boolean; id_todo: number; }> | null = null 
     private isTasks: boolean = false
 
     private async getTasksDB() {
@@ -35,12 +35,15 @@ class TodoTasks {
             `
             
         } else if (this.tasksArray) {
-            let resultHtml = ``
+            let resultHtml = `<a href="/todo/create">Создать еще</a>`
 
             for (let task of this.tasksArray) {
-                const [title, description, status, id_todo] = task
+                const title = task.title;
+                const description = task.description;
+                const status = task.status;
+                const id_todo = task.id_todo;
                 let statusStr
-
+                
                 if (status == true) {
                     statusStr = "Выполнена"
                 } else {
@@ -48,20 +51,23 @@ class TodoTasks {
                 }
 
                 resultHtml += `
-                <div id="title">
-                    <h4>Title:</h4><br> ${title}
+                <div id="title" class="row">
+                    <h4>Title:</h4>
+                    <span>${title}</span>
                 </div>
 
                 <div id="description">
-                <h5>description:</h5><br> ${description}
+                    <h5>description:</h5> ${description}
                 </div>
 
-                <div id="status">
-                <h5>status:</h5> ${statusStr}
+                <div id="status" class="row">
+                    <h5>status:</h5>
+                    <span>${statusStr}</span>
                 </div>
 
-                <div id="id_todo">
-                <h6>id:</h6> ${id_todo}
+                <div id="id_todo" class="row">
+                    <h6>id:</h6> 
+                    <span>${id_todo}</span>
                 </div>
 
                 <form class="task_control-form" data-task-id="${id_todo}">
@@ -76,18 +82,18 @@ class TodoTasks {
     }
 
     private async eventChangeTask(taskId: string) {
-        window.location.href = `todo/change?=${taskId}`;
+        window.location.href = `/todo/change?task_id=${taskId}`;
         return;
     }
 
     private async eventStatusTask(taskId: string) {
-        const response = await securedApiCall("todo/change_status", {
+        const response = await securedApiCall("/todo/change_status", {
             method: "POST",
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                taskId
+                task_id: taskId
             })
         });
 
@@ -111,13 +117,13 @@ class TodoTasks {
     }
 
     private async eventDeleteTask(taskId: string) {
-        const response = await securedApiCall("todo/delete", {
+        const response = await securedApiCall("/todo/delete", {
             method: "POST",
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                taskId
+                task_id: taskId
             })
         });
 

@@ -6,15 +6,15 @@
     <title>Изменение задачи</title>
 </head>
 <body>
-    <h3>Создайте свою первую задачу!</h3>
+    <h3>Измените задачу на свой вкус:</h3>
     <form id="change_task-form">
         <div>
-            <input id="title" type="text" value="{{title}}">
+            <input id="title" type="text" value="{{title}}"><br>
             <textarea id="description">{{description}}</textarea>
             <button type="submit">Изменить</button>
         </div>
     </form>
-    <a href="todo/tasks">Вернуться в задачи</a>
+    <a href="/todo/tasks">Вернуться в задачи</a>
     <script src="/static/todo/change.js" type="module"></script>
 </body>
 </html>

@@ -9,7 +9,7 @@ from app.backend.db.sql.settings import engine
 from jose import ExpiredSignatureError, jwt
 from jose.exceptions import JWTError
 from app.backend.api.security import tokens
-from app.backend.api import auth, todo
+from app.backend.api import auth, todo, root
 from config import SECRET_KEY_JWT
 
 logging.basicConfig(level=logging.INFO)
@@ -52,9 +52,10 @@ async def check_access_token(request: Request, call_next):
     return responce
 
 app.mount("/static", StaticFiles(directory="app/frontend/dist/ts"))
-app.route(auth.router)
-app.route(todo.router)
-app.mount(tokens.router)
+app.include_router(auth.router)
+app.include_router(todo.router)
+app.include_router(tokens.router)
+app.include_router(root.router)
 
 if __name__ == "__main__":
-    uvicorn.run("main:app")
+    uvicorn.run("main:app", reload=True)

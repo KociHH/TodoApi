@@ -23,7 +23,7 @@ def create_token(
         logger.error(f"Не задан аргумент exp: {exp} для {type} токена")
         return
 
-    data['jti'] = uuid.uuid4()
+    data['jti'] = str(uuid.uuid4())
     data["exp"] = exp_result
     data['type'] = type
 
