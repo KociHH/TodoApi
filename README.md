@@ -1,5 +1,10 @@
 # TodoApi
 
+## Краткое описание
+Есть регистрация/логин для валидации пользователя на сайте, можно входить сразу имея уникальный jwt токен.
+При создании аккаунта, пользователь может создать задачи которые сортируются по новизне изменяя свой id.
+В задачах есть кнопки для управления: Удалить, Изменить, Выполнено/Не выполнено
+
 ## Основные функции
 
 1.  Вход: name, password (либо по jwt)
@@ -10,11 +15,11 @@
 
 1.  Удаление конкретной задачи (по кнопке) 
     
-
 2.  Создание задачи: title, description
     
-
 3.  Изменение задачи: title, description
+
+4. Изменение статус задачи (по кнопке)
      
 
 ## Технологии, применяемые в проекте
@@ -30,16 +35,24 @@
 1. Клонирование
 ```bash
 git clone https://github.com/KociHH/TodoApi.git
+cd TodoApi
 ```
 
-2. Создать файл .env и установить зависимости
-
-3. Переход в папку frontend, создание node_modules, компиляция ts: 
+2. Создать файл .env и установить зависимости:
 ```bash
-cd app/frontend && npm i -D typescript && npm run build
+printf "POSTGRES_URL=\nSECRET_KEY_JWT=\nEXP_ACCESS_TOKEN=\nEXP_REFRESH_TOKEN=\n" > .env
+python -m pip install -r requirements.txt
+```
+
+3. Переход в папку frontend, установка зависимостей, компиляция ts: 
+```bash
+cd app/frontend
+npm install
+npm run build
 ```
 
 5. Запуск
 ```bash
+cd ../..
 python main.py
 ```
