@@ -15,7 +15,7 @@ async function updateTokens(currentRefreshToken: string): Promise<{accessToken: 
             const errorData = await response.json();
             if (response.status === 401 && typeof errorData.detail === 'string' && errorData.detail.includes("Refresh token")) {
                 console.error("Refresh token истек. Перенаправление на страницу входа.");
-                // clearTokensAndRedirectLogin();
+                clearTokensAndRedirectLogin();
             } else {
                 console.error("Ошибка при обновлении токенов:", errorData.detail || response.statusText);
                 throw new Error(errorData.detail || `${'Server error'}`);
@@ -81,7 +81,7 @@ async function securedApiCall(url_api: string, options: RequestInit = {}) {
             'Authorization': `Bearer ${accessToken}`,
         },
     });
-
+    // User not authenticated
     if (response.status === 401) {
         try {
             const newAccess = await updateAccess(refreshToken);
@@ -96,14 +96,23 @@ async function securedApiCall(url_api: string, options: RequestInit = {}) {
             });
         } catch (accessError) {
             console.error("Не удалось обновить токен:", accessError);
-            // clearTokensAndRedirectLogin();
+            clearTokensAndRedirectLogin();
             return;
         }
+    }
+    // rate limit (custom Retry-After)
+    if (response.status === 429) {
+        const retryAfterHeader = response.headers.get("Retry-After");
+        const delay = retryAfterHeader ? parseInt(retryAfterHeader) : 10;
+        
+        console.warn(`Получен 429 Too Many Requests. Повторная попытка через ${delay} секунд.`);
+        await new Promise(resolve => setTimeout(resolve, delay * 1000));
+        
+        return securedApiCall(url_api, options);
     }
 
     if (!response.ok) {
         console.error("API вызов завершился неудачей после попытки обновления токена.", response);
-        // clearTokensAndRedirectLogin();
         return;
     }
 
@@ -132,7 +141,7 @@ async function checkUpdateTokens() {
         }
     } catch (error) {
         console.error('Ошибка проверки токенов:', error);
-        // clearTokensAndRedirectLogin();
+        clearTokensAndRedirectLogin();
         return;
     }
 }
